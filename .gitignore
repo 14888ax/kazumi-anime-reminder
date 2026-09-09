@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+mail_config.json
+state.json
