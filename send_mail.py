@@ -4,8 +4,8 @@
 凭据从 mail_config.json 读取（已被 .gitignore 排除，不会上传仓库）：
 {
   "mode": "gmail",
-  "to": "your-email@example.com",
-  "gmail_user": "your-gmail@gmail.com",
+  "to": "recipient@example.com",
+  "gmail_user": "sender@gmail.com",
   "gmail_token_file": "/path/to/gmail_oauth_token.json",
   "gmail_client_file": "/path/to/client_secret.json"
 }

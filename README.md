@@ -54,8 +54,8 @@ export KAZUMI_SNAPSHOT=/path/to/kazumiSync/history/snapshot.json   # 可选
 ```json
 {
   "mode": "gmail",
-  "to": "收件邮箱@example.com",
-  "gmail_user": "发件gmail@gmail.com",
+  "to": "recipient@example.com",
+  "gmail_user": "sender@gmail.com",
   "gmail_token_file": "/path/to/gmail_oauth_token.json",
   "gmail_client_file": "/path/to/client_secret.json"
 }
