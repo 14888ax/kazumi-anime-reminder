@@ -5,8 +5,9 @@
   Bangumi (next.bgm.tv 匿名 API)          → 每部剧的剧集放送表 (airdate)
 
 逻辑 (以 Bangumi 放送表为唯一权威):
-  · 话数 = 该条目内已放送(airdate<=今天)的本篇集数
-  · 首次建档: 基线取到"昨天为止"的放送, 仅当今天正好有新放送才提醒一次
+  · 话数 = 该条目内已放送(airdate<=截止日)的本篇集数
+  · 隔天提醒: 截止日 = 昨天。即"今天放送的话, 明天(10:00)才提醒", 当天不提醒
+  · 首次建档: 基线取到"前天为止"的放送, 仅当昨天正好有新放送才提醒一次
   · 之后: 每当出现比上次记录更新的 airdate → 提醒, 去重
 用法:
   python3 check_updates.py            # 检查并输出提醒文本(stdout)
@@ -18,7 +19,7 @@ import json
 import os
 import sys
 import urllib.request
-from datetime import date
+from datetime import date, timedelta
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 COLLECT_TMP = os.environ.get(
     "KAZUMI_COLLECT_TMP", "/opt/kazumi-webdav/data/kazumiSync/collectibles.tmp")
@@ -111,16 +112,19 @@ def main():
 
     collects = load_collects()
     state = {} if args.force else load_state()
-    today = date.today().isoformat()
+    today = date.today()
+    # 隔天提醒: 只报道"昨天及以前"的放送 → 今天更新的留到明天再提醒
+    cutoff = (today - timedelta(days=1)).isoformat()
+    today_s = today.isoformat()
 
     if args.dump:
-        print(f"收藏 {len(collects)} 部:")
+        print(f"收藏 {len(collects)} 部 (截止 {cutoff}):")
         for c in collects:
             eps = bangumi_episodes(c["bangumiId"])
             if eps is None:
                 print(f"  [{TYPE_LABEL.get(c['collectType'])}] {c['name']} 查询失败")
                 continue
-            st = state_of(eps, today)
+            st = state_of(eps, cutoff)
             print(f"  [{TYPE_LABEL.get(c['collectType'])}] {c['name']} "
                   f"(bgm:{c['bangumiId']}) 已放送 {st['airedEp']} 话, "
                   f"最新 {st['lastAirdate']} {st['lastName']!r}")
@@ -134,13 +138,13 @@ def main():
         eps = bangumi_episodes(c["bangumiId"])
         if eps is None:
             continue
-        st = state_of(eps, today)
+        st = state_of(eps, cutoff)
         rec = state.get(bid, {})
         prev_airdate = rec.get("lastAirdate")
 
         if prev_airdate is None:
-            # 首跑/新收藏: 基线 = 最新放送. 特殊: 最新放送日==今天 → 值得提醒一次
-            new_ep = st["airedEp"] > 0 and st["lastAirdate"] == today
+            # 首跑/新收藏: 基线 = 最新放送(截止昨天). 特殊: 最新放送日==昨天 → 值得提醒一次
+            new_ep = st["airedEp"] > 0 and st["lastAirdate"] == cutoff
             if new_ep:
                 reminders.append((c, st))
             state[bid] = {
@@ -162,7 +166,7 @@ def main():
     save_state(state)
 
     if reminders:
-        lines = [f"📅 {today} 番剧更新提醒:"]
+        lines = [f"📅 {today_s} 番剧更新提醒（昨日及以前放送）:"]
         for c, st in reminders:
             title = c["name"]
             ep = st["airedEp"]
